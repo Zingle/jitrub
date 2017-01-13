@@ -1,0 +1,19 @@
+{
+  "name": "jitrub",
+  "version": "0.0.1",
+  "description": "Jira-GitHub sync",
+  "main": "index.js",
+  "bin": {
+    "jitrub": "jitrub-cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zingle/jitrub.git"
+  },
+  "author": "Richard Remer <reanjr@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Zingle/jitrub/issues"
+  },
+  "homepage": "https://github.com/Zingle/jitrub#readme"
+}
