@@ -2,6 +2,7 @@ const parseurl = require("url").parse;
 const jitrub = require("../lib/jitrub");
 const creds = require("../lib/creds");
 const usage = require("./usage");
+const keys = Object.keys;
 
 var opts = {},
     args, arg, script,
@@ -15,59 +16,68 @@ while (args.length) switch ((arg = args.shift())) {
         usage();
         process.exit(0);
     default:
-        opts.jira = readjira(args);
-        opts.github = readgithub(args);
-        opts.base = readval(args);
-        opts.merge = readval(args);
-        if (args.length) throw new Error(`unexpected argument ${args[0]}`);
+        readjira(args).sync().then(log => {
+            var added = keys(log).filter(k => log[k])),
+                removed = keys(log).filter(k => !log[k]);
+
+            if (added.length) {
+                console.log("added the following branches:");
+                added.forEach(branch => console.log(` - ${branch}`));
+            }
+
+            if (removed.length) {
+                console.log("removed the following branches:");
+                removed.forEach(branch => console.log(` - ${branch}`));
+            }
+        });
         break;
 }
 
+function readargs(args) {
+    return jitrub(readjira(args), readgithub(args));
+}
 
-jr = jitrub(jitrub.jira(opts.jira.endpoint))
+function readjira(args) {
+    var arg = readval(args),
+        url = parseurl(arg),
+        server, auth, ident, secret, issues;
 
-function createSync(opts) {
-    var jopts = opts.jira,
-        gopts = opts.githube,
-        jcreds = creds(jopts.ident, jopts.secret),
-        gcreds = creds(gopts.ident, gopts.secret, gopts.email),
-        jira = jitrub.jira(jopts.endpoint, jcreds),
-        github = jitrub.github(gopts.repo, gopts.creds);
+    switch (url.protocol) {
+        case "jira+http": server = "http://"; break;
+        case "jira+https": server = "https://"; break;
+        default: throw new Error(`${url.protocol} is not valid jira scheme`);
+    }
+
+    server = `${server}${url.host}${url.pathname}`;
+    auth = (url.auth || ":").split(":");
+    ident = auth[0];
+    secret = auth[1];
+    issues = url.query;
+
+    return jitrub.jira(server, creds(ident, secret), issues));
+}
+
+function readgithub(args) {
+    var arg = readval(args),
+        url = parseurl(arg, true),
+        repo, auth, ident, secret, email, base, build;
+
+    if (url.protocol !== "github:") {
+        throw new Error(`{url.protocol} is not valid github scheme`);
+    }
+
+    repo = `${url.host}${url.path}`;
+    auth = (url.auth || ":").split(":");
+    ident = auth[0];
+    secret = auth[1];
+    email = url.query.email;
+    base = url.query.base;
+    build = url.query.build;
+
+    return jitrub.github(repo, creds(ident, secret, email), base, build);
 }
 
 function readval(args) {
     if (!args.length) throw new Error("missing argument");
     return args.shift();
-}
-
-function readjira(args) {
-    var arg = readarg(args),
-        url = parseurl(arg),
-        opts = {}, m;
-
-    if ((m = /^jira+(https?):$/.exec(url.protocol))) {
-        opts.endpoint = `${m[1]}://${url.host}${url.pathname}`;
-        opts.ident = url.auth ? url.auth.split(":")[0] : undefined;
-        opts.secret = url.auth ? url.auth.split(":")[1] : undefined;
-        opts.include = opts.query ? opts.query.split(",") : [];
-        return opts;
-    } else {
-        throw new Error(`invalid Jira connection URI: ${arg}`);
-    }
-}
-
-function readgithub(args) {
-    var arg = readarg(args),
-        url = parseurl(arg, true),
-        opts = {}, m;
-
-    if (url.protocol === "github:") {
-        opts.repo = `${url.host}${url.path}`;
-        opts.ident = url.auth ? url.auth.split(":")[0] : undefined;
-        opts.secret = url.auth ? url.auth.split(":")[1] : undefined;
-        opts.email = url.query.email;
-        return opts;
-    } else {
-        throw new Error(`invalid GitHub connection URI: ${arg}`);
-    }
 }
