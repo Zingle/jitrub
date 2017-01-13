@@ -15,30 +15,32 @@ while (args.length) switch ((arg = args.shift())) {
         usage();
         process.exit(0);
     default:
-        opts.jira = readarg_jira(args);
-        opts.github = readarg_github(args);
-        opts.base = readarg(args);
-        opts.merge = readarg(args);
-
-        url = parseurl(args[0]);
-        if (! /^jira(+http)?:$/.test(url.protocol))
-
-        if (url.protocol ===
-        auth = url.auth.split(":");
-        opts.jira_ident = 
-        opts.creds.jira = creds.apply(null, urlparts.auth.split(":"));
-        
-
+        opts.jira = readjira(args);
+        opts.github = readgithub(args);
+        opts.base = readval(args);
+        opts.merge = readval(args);
+        if (args.length) throw new Error(`unexpected argument ${args[0]}`);
         break;
 }
 
 
-function readarg(args) {
+jr = jitrub(jitrub.jira(opts.jira.endpoint))
+
+function createSync(opts) {
+    var jopts = opts.jira,
+        gopts = opts.githube,
+        jcreds = creds(jopts.ident, jopts.secret),
+        gcreds = creds(gopts.ident, gopts.secret, gopts.email),
+        jira = jitrub.jira(jopts.endpoint, jcreds),
+        github = jitrub.github(gopts.repo, gopts.creds);
+}
+
+function readval(args) {
     if (!args.length) throw new Error("missing argument");
     return args.shift();
 }
 
-function readarg_jira(args) {
+function readjira(args) {
     var arg = readarg(args),
         url = parseurl(arg),
         opts = {}, m;
@@ -50,11 +52,11 @@ function readarg_jira(args) {
         opts.include = opts.query ? opts.query.split(",") : [];
         return opts;
     } else {
-        throw new Error(`expect ${arg} to use Jira scheme (i.e. jira+http://...)`);
+        throw new Error(`invalid Jira connection URI: ${arg}`);
     }
 }
 
-function readarg_github(args) {
+function readgithub(args) {
     var arg = readarg(args),
         url = parseurl(arg, true),
         opts = {}, m;
@@ -66,7 +68,6 @@ function readarg_github(args) {
         opts.email = url.query.email;
         return opts;
     } else {
-        throw new Error(`expect ${arg} to use GitHub scheme (i.e. github://...)`);
+        throw new Error(`invalid GitHub connection URI: ${arg}`);
     }
-
 }
