@@ -26,7 +26,7 @@ try {
     }
 
     createSync(jiraUri, githubUri)().then(log => {
-        var added = keys(log).filter(k => log[k])),
+        var added = keys(log).filter(k => log[k]),
             removed = keys(log).filter(k => !log[k]);
 
         if (added.length) {
