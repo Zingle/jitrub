@@ -25,9 +25,7 @@ try {
         throw new Error("unexpected argument");
     }
 
-    createSync(createJira(readarg(args)), createGithub(readarg(args)))
-
-    createSync(jira, github)().then(log => {
+    createSync(jiraUri, githubUri)().then(log => {
         var added = keys(log).filter(k => log[k])),
             removed = keys(log).filter(k => !log[k]);
 
