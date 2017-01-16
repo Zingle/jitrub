@@ -1,83 +1,106 @@
 const parseurl = require("url").parse;
-const jitrub = require("../lib/jitrub");
 const creds = require("../lib/creds");
 const usage = require("./usage");
+const jitrub = require("../lib/jitrub");
+const jira = jitrub.jira;
+const github = jitrub.github;
 const keys = Object.keys;
 
-var opts = {},
-    args, arg, script,
-    url, auth;
-
-args = process.argv.slice(1);
-script = args.shift();
+var args = process.argv.slice(2),
+    arg, jiraUri, githubUri, sync;
 
 while (args.length) switch ((arg = args.shift())) {
     case "--help":
         usage();
         process.exit(0);
     default:
-        readjira(args).sync().then(log => {
-            var added = keys(log).filter(k => log[k])),
-                removed = keys(log).filter(k => !log[k]);
-
-            if (added.length) {
-                console.log("added the following branches:");
-                added.forEach(branch => console.log(` - ${branch}`));
-            }
-
-            if (removed.length) {
-                console.log("removed the following branches:");
-                removed.forEach(branch => console.log(` - ${branch}`));
-            }
-        });
         break;
 }
 
-function readargs(args) {
-    return jitrub(readjira(args), readgithub(args));
-}
+try {
+    jiraUri = readarg(args);
+    githubUri = readarg(args);
 
-function readjira(args) {
-    var arg = readval(args),
-        url = parseurl(arg),
-        server, auth, ident, secret, issues;
-
-    switch (url.protocol) {
-        case "jira+http": server = "http://"; break;
-        case "jira+https": server = "https://"; break;
-        default: throw new Error(`${url.protocol} is not valid jira scheme`);
+    if (args.length) {
+        throw new Error("unexpected argument");
     }
 
-    server = `${server}${url.host}${url.pathname}`;
-    auth = (url.auth || ":").split(":");
-    ident = auth[0];
-    secret = auth[1];
-    issues = url.query;
+    createSync(createJira(readarg(args)), createGithub(readarg(args)))
 
-    return jitrub.jira(server, creds(ident, secret), issues));
+    createSync(jira, github)().then(log => {
+        var added = keys(log).filter(k => log[k])),
+            removed = keys(log).filter(k => !log[k]);
+
+        if (added.length) {
+            console.log("added the following branches:");
+            added.forEach(branch => console.log(` - ${branch}`));
+        }
+
+        if (removed.length) {
+            console.log("removed the following branches:");
+            removed.forEach(branch => console.log(` - ${branch}`));
+        }
+    });
+} catch (err) {
+    console.error(process.env.DEBUG ? err.stack : err.message);
 }
 
-function readgithub(args) {
-    var arg = readval(args),
-        url = parseurl(arg, true),
-        repo, auth, ident, secret, email, base, build;
-
-    if (url.protocol !== "github:") {
-        throw new Error(`{url.protocol} is not valid github scheme`);
-    }
-
-    repo = `${url.host}${url.path}`;
-    auth = (url.auth || ":").split(":");
-    ident = auth[0];
-    secret = auth[1];
-    email = url.query.email;
-    base = url.query.base;
-    build = url.query.build;
-
-    return jitrub.github(repo, creds(ident, secret, email), base, build);
-}
-
-function readval(args) {
+function readarg(args) {
     if (!args.length) throw new Error("missing argument");
     return args.shift();
+}
+
+function createSync(jiraUri, githubUri) {
+    var jira = createJira(jiraUri),
+        github = createGithub(githubUri),
+        issueSpec = parseurl(jiraUri).query,
+        projectCode = issueSpec.split(":")[0],
+        includeStats = issueSpec.splut(":")[1].split(","),
+        mergeSpec = parseurl(githubUri, true).query,
+        baseBranch = mergeSpec.base,
+        headBranch = mergeSpec.head,
+        jitrubSync;
+
+    jitrubSync = jitrub(jira, github);
+    jitrubSync.selectProject(projectCode);
+    jitrubSync.selectHead(headBranch);
+    jitrubSync.selectBase(baseBranch);
+    includeStats.forEach(status => jitrubSync.includeStatus(status));
+
+    return jitrubSync.sync.bind(jitrubSync);
+}
+
+function createJira(jiraUri) {
+    var uri = parseurl(jiraUri),
+        server, auth, ident, secret;
+
+    switch (uri.protocol) {
+        case "jira+http": server = "http://"; break;
+        case "jira+https": server = "https://"; break;
+        default: throw new Error(`${uri.protocol} is not valid jira schema`);
+    }
+
+    server = `${server}${uri.host}${uri.pathname}`;
+    auth = (url.auth || ":").split(":");
+    ident = auth[0];
+    secret = auth[1];
+
+    return jira(server, creds(ident, secret));
+}
+
+function createGithub(githubUri) {
+    var uri = parseurl(githubUri, true),
+        repo, auth, ident, secret, email;
+
+    if (uri.protocol !== "github:") {
+        throw new Error(`${uri.protocol} is not valid github scheme`);
+    }
+
+    repo = `${uri.host}${uri.path}`;
+    auth = (uri.auth || ":").split(":");
+    ident = auth[0];
+    secret = auth[1];
+    email = uri.query.email;
+
+    return github(repo, creds(ident, secret, email));
 }
