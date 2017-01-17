@@ -40,7 +40,7 @@ createSync(jiraUri, githubUri)().then(log => {
 
     if (added.length) {
         console.log("added the following branches:");
-        removed.forEach(branch => console.log(` - ${branch}`));
+        added.forEach(branch => console.log(` - ${branch}`));
     }
 
     if (removed.length) {
