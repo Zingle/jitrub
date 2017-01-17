@@ -68,7 +68,7 @@ function createSync(jiraUri, githubUri) {
         github = createGithub(githubUri),
         issueSpec = parseurl(jiraUri).query,
         projectCode = issueSpec.split(":")[0],
-        includeStats = issueSpec.splut(":")[1].split(","),
+        includeStats = issueSpec.split(":")[1].split(","),
         mergeSpec = parseurl(githubUri, true).query,
         baseBranch = mergeSpec.base,
         headBranch = mergeSpec.head,
