@@ -93,7 +93,8 @@ function createJira(jiraUri) {
         default: fatal(new Error(`${uri.protocol} is not valid jira schema`));
     }
 
-    server = `${server}${uri.host}${uri.pathname}`;
+    server = `${server}${uri.host}`;
+    if (uri.pathname) server += uri.pathname;
     auth = (uri.auth || ":").split(":");
     ident = auth[0];
     secret = auth[1];
