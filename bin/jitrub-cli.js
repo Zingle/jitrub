@@ -1,50 +1,63 @@
+const basename = require("path").basename;
 const parseurl = require("url").parse;
 const creds = require("../lib/creds");
-const usage = require("./usage");
 const jitrub = require("../lib/jitrub");
 const jira = jitrub.jira;
 const github = jitrub.github;
 const keys = Object.keys;
 
 var args = process.argv.slice(2),
-    arg, jiraUri, githubUri, sync;
+    arg, jiraUri, githubUri;
 
 while (args.length) switch ((arg = args.shift())) {
-    case "--help":
-        usage();
-        process.exit(0);
-    default:
-        break;
+    case "--help": usage();
+    default: break;
 }
 
-try {
-    jiraUri = readarg(args);
-    githubUri = readarg(args);
+if (args.length < 2) usage(new Error("missing argument"));
+if (args.length > 2) usage(new Error("unexpected argument"));
 
-    if (args.length) {
-        throw new Error("unexpected argument");
+jiraUri = readarg(args);
+githubUri = readarg(args);
+
+createSync(jiraUri, githubUri)().then(log => {
+    var added = keys(log).filter(k => log[k]),
+        removed = keys(log).filter(k => !log[k]);
+
+    if (added.length) {
+        console.log("added the following branches:");
+        added.forEach(branch => console.log(` - ${branch}`));
     }
 
-    createSync(jiraUri, githubUri)().then(log => {
-        var added = keys(log).filter(k => log[k]),
-            removed = keys(log).filter(k => !log[k]);
+    if (removed.length) {
+        console.log("removed the following branches:");
+        removed.forEach(branch => console.log(` - ${branch}`));
+    }
+});
 
-        if (added.length) {
-            console.log("added the following branches:");
-            added.forEach(branch => console.log(` - ${branch}`));
-        }
-
-        if (removed.length) {
-            console.log("removed the following branches:");
-            removed.forEach(branch => console.log(` - ${branch}`));
-        }
-    });
-} catch (err) {
+function fatal(err) {
     console.error(process.env.DEBUG ? err.stack : err.message);
+    process.exit(1);
+}
+
+function usage(err) {
+    var script = basename(process.argv[1]),
+        usage;
+
+    usage = `Usage: ${script} <jiracn> <gitcn>`;
+
+    if (err) {
+        console.error(err.message);
+        console.error(usage);
+        process.exit(1);
+    } else {
+        console.log(usage);
+        process.exit(0);
+    }
 }
 
 function readarg(args) {
-    if (!args.length) throw new Error("missing argument");
+    if (!args.length) usage(new Error("missing argument"));
     return args.shift();
 }
 
@@ -75,7 +88,7 @@ function createJira(jiraUri) {
     switch (uri.protocol) {
         case "jira+http": server = "http://"; break;
         case "jira+https": server = "https://"; break;
-        default: throw new Error(`${uri.protocol} is not valid jira schema`);
+        default: fatal(`${uri.protocol} is not valid jira schema`);
     }
 
     server = `${server}${uri.host}${uri.pathname}`;
@@ -91,7 +104,7 @@ function createGithub(githubUri) {
         repo, auth, ident, secret, email;
 
     if (uri.protocol !== "github:") {
-        throw new Error(`${uri.protocol} is not valid github scheme`);
+        fatal(`${uri.protocol} is not valid github scheme`);
     }
 
     repo = `${uri.host}${uri.path}`;
