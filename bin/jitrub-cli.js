@@ -2,20 +2,23 @@ const basename = require("path").basename;
 const parseurl = require("url").parse;
 const creds = require("../lib/creds");
 const jitrub = require("../lib/jitrub");
-const jira = jitrub.jira;
-const github = jitrub.github;
+const jira = require("../lib/jira");
+const github = require("../lib/github");
 const keys = Object.keys;
 
-var args = process.argv.slice(2),
-    arg, jiraUri, githubUri;
+var opts = process.argv.slice(2),
+    opt, args = [],
+    jiraUri, githubUri;
 
-while (args.length) switch ((arg = args.shift())) {
+while (opts.length) switch ((opt = opts.shift())) {
     case "--help": usage();
-    default: break;
+    default:
+        args = [opt].concat(opts);
+        opts = [];
 }
 
-if (args.length < 2) usage(new Error("missing argument"));
-if (args.length > 2) usage(new Error("unexpected argument"));
+if (args.length < 2) usage(new Error());
+if (args.length > 2) usage(new Error());
 
 jiraUri = readarg(args);
 githubUri = readarg(args);
@@ -47,7 +50,6 @@ function usage(err) {
     usage = `Usage: ${script} <jiracn> <gitcn>`;
 
     if (err) {
-        console.error(err.message);
         console.error(usage);
         process.exit(1);
     } else {
@@ -57,7 +59,7 @@ function usage(err) {
 }
 
 function readarg(args) {
-    if (!args.length) usage(new Error("missing argument"));
+    if (!args.length) usage(new Error());
     return args.shift();
 }
 
@@ -86,13 +88,13 @@ function createJira(jiraUri) {
         server, auth, ident, secret;
 
     switch (uri.protocol) {
-        case "jira+http": server = "http://"; break;
-        case "jira+https": server = "https://"; break;
-        default: fatal(`${uri.protocol} is not valid jira schema`);
+        case "jira+http:": server = "http://"; break;
+        case "jira+https:": server = "https://"; break;
+        default: fatal(new Error(`${uri.protocol} is not valid jira schema`));
     }
 
     server = `${server}${uri.host}${uri.pathname}`;
-    auth = (url.auth || ":").split(":");
+    auth = (uri.auth || ":").split(":");
     ident = auth[0];
     secret = auth[1];
 
@@ -104,7 +106,7 @@ function createGithub(githubUri) {
         repo, auth, ident, secret, email;
 
     if (uri.protocol !== "github:") {
-        fatal(`${uri.protocol} is not valid github scheme`);
+        fatal(new Error(`${uri.protocol} is not valid github scheme`));
     }
 
     repo = `${uri.host}${uri.path}`;
