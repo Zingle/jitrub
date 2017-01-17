@@ -8,10 +8,21 @@ const keys = Object.keys;
 
 var opts = process.argv.slice(2),
     opt, args = [],
+    verbose = false,
     jiraUri, githubUri;
 
 while (opts.length) switch ((opt = opts.shift())) {
-    case "--help": usage();
+    case "--help":
+        usage();
+        break;
+    case "-v":
+    case "--verbose":
+        verbose = true;
+        break;
+    case "-q":
+    case "--quiet":
+        verbose = false;
+        break;
     default:
         args = [opt].concat(opts);
         opts = [];
@@ -36,7 +47,11 @@ createSync(jiraUri, githubUri)().then(log => {
         console.log("removed the following branches:");
         removed.forEach(branch => console.log(` - ${branch}`));
     }
-});
+
+    if (!added.length && !removed.length) {
+        console.log("nothing to do");
+    }
+}).catch(fatal);
 
 function fatal(err) {
     console.error(process.env.DEBUG ? err.stack : err.message);
