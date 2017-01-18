@@ -34,23 +34,14 @@ if (args.length > 2) usage(new Error());
 jiraUri = readarg(args);
 githubUri = readarg(args);
 
-createSync(jiraUri, githubUri)().then(log => {
-    var added = keys(log).filter(k => log[k]),
-        removed = keys(log).filter(k => !log[k]);
+if (!verbose) {
+    console.log = () => {};
+    console.info = () => {};
+    console.trace = () => {};
+}
 
-    if (added.length) {
-        console.log("added the following branches:");
-        added.forEach(branch => console.log(` - ${branch}`));
-    }
-
-    if (removed.length) {
-        console.log("removed the following branches:");
-        removed.forEach(branch => console.log(` - ${branch}`));
-    }
-
-    if (!added.length && !removed.length) {
-        console.log("nothing to do");
-    }
+createSync(jiraUri, githubUri)().then(buildtag => {
+    console.log(buildtag);
 }).catch(fatal);
 
 function fatal(err) {
