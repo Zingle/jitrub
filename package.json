@@ -2,9 +2,8 @@
   "name": "jitrub",
   "version": "0.0.1",
   "description": "Jira-GitHub sync",
-  "main": "index.js",
   "bin": {
-    "jitrub": "jitrub-cli.js"
+    "jitrub": "bin/jitrub-cli.js"
   },
   "repository": {
     "type": "git",
