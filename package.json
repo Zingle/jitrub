@@ -1,6 +1,6 @@
 {
   "name": "jitrub",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Jira-GitHub sync",
   "main": "index.js",
   "bin": {
