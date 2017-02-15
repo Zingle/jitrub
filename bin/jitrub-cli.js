@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const basename = require("path").basename;
 const parseurl = require("url").parse;
 const creds = require("../lib/creds");
