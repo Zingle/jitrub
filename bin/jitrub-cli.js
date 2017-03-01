@@ -43,7 +43,7 @@ if (!verbose) {
 }
 
 createSync(jiraUri, githubUri)().then(buildtag => {
-    console.log(buildtag);
+    console.log("tag:", buildtag);
 }).catch(fatal);
 
 function fatal(err) {
